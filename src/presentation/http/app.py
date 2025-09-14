@@ -2,6 +2,7 @@ import fastapi_problem_details as problem
 from dishka import FromDishka
 from dishka.integrations.fastapi import inject, setup_dishka
 from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi_problem_details import ProblemResponse
 
 from src.application.get_employer_by_id import GetEmployerById, GetEmployerByIdDTO
@@ -15,6 +16,13 @@ def create_app() -> FastAPI:
     app = FastAPI()
     _ = problem.init_app(app)
     setup_dishka(get_di_container(), app)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.exception_handler(EmployerNotFoundError)
     async def employer_not_found_handler(_: Request, exc: EmployerNotFoundError):
