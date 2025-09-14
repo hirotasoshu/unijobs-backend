@@ -8,10 +8,18 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from src.application.apply_for_vacancy import ApplyForVacancy
 from src.application.get_employer_by_id import GetEmployerById
+from src.application.get_user_application_for_vacancy import (
+    GetUserApplicationForVacancy,
+)
+from src.application.get_user_applications import GetUserApplications
 from src.application.get_vacancies_by_filters import GetVacanciesByFilters
 from src.application.get_vacancy_by_id import GetVacancyById
+from src.application.update_application import UpdateApplication
+from src.infra.adapters.database.application_gateway import SqlAlchemyApplicationGateway
 from src.infra.adapters.database.employer_gateway import SqlAlchemyEmployerGateway
+from src.infra.adapters.database.transaction import SqlAlchemyTransactionManager
 from src.infra.adapters.database.vacancy_gateway import SqlAlchemyVacancyGateway
 
 
@@ -54,6 +62,18 @@ class DiProvider(Provider):
         return SqlAlchemyVacancyGateway(session)
 
     @provide(scope=Scope.REQUEST)
+    async def provide_application_gateway(
+        self, session: AsyncSession
+    ) -> SqlAlchemyApplicationGateway:
+        return SqlAlchemyApplicationGateway(session)
+
+    @provide(scope=Scope.REQUEST)
+    async def provide_transaction_manager(
+        self, session: AsyncSession
+    ) -> SqlAlchemyTransactionManager:
+        return SqlAlchemyTransactionManager(session)
+
+    @provide(scope=Scope.REQUEST)
     async def provide_get_employer_by_id_interactor(
         self, gateway: SqlAlchemyEmployerGateway
     ) -> GetEmployerById:
@@ -70,6 +90,38 @@ class DiProvider(Provider):
         self, gateway: SqlAlchemyVacancyGateway
     ) -> GetVacanciesByFilters:
         return GetVacanciesByFilters(gateway)
+
+    @provide(scope=Scope.REQUEST)
+    async def provide_get_user_applications_interactor(
+        self, gateway: SqlAlchemyApplicationGateway
+    ) -> GetUserApplications:
+        return GetUserApplications(gateway)
+
+    @provide(scope=Scope.REQUEST)
+    async def provide_get_user_application_for_interactor(
+        self, gateway: SqlAlchemyApplicationGateway
+    ) -> GetUserApplicationForVacancy:
+        return GetUserApplicationForVacancy(gateway)
+
+    @provide(scope=Scope.REQUEST)
+    async def provide_apply_for_vacancy_interactor(
+        self,
+        gateway: SqlAlchemyApplicationGateway,
+        transaction_manager: SqlAlchemyTransactionManager,
+    ) -> ApplyForVacancy:
+        return ApplyForVacancy(
+            application_gateway=gateway, transaction_manager=transaction_manager
+        )
+
+    @provide(scope=Scope.REQUEST)
+    async def provide_update_application_interactor(
+        self,
+        gateway: SqlAlchemyApplicationGateway,
+        transaction_manager: SqlAlchemyTransactionManager,
+    ) -> UpdateApplication:
+        return UpdateApplication(
+            application_gateway=gateway, transaction_manager=transaction_manager
+        )
 
 
 def get_di_container() -> AsyncContainer:
