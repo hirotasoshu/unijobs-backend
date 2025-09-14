@@ -1,8 +1,16 @@
-from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from datetime import datetime
 
+from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+)
+
+from src.domain.value_object.application_status import ApplicationStatus
 from src.domain.value_object.employment_type import EmploymentType
-from src.domain.value_object.ids import EmployerId, VacancyId
+from src.domain.value_object.ids import ApplicationId, EmployerId, UserId, VacancyId
 from src.domain.value_object.workformat import WorkFormat
 
 
@@ -41,3 +49,19 @@ class VacancyModel(Base):
 
     employer_id: Mapped[EmployerId] = mapped_column(ForeignKey("employers.id"))
     employer: Mapped["EmployerModel"] = relationship(back_populates="vacancies")
+    applications: Mapped[list["ApplicationModel"]] = relationship(
+        back_populates="vacancy", cascade="all, delete-orphan"
+    )
+
+
+class ApplicationModel(Base):
+    __tablename__: str = "applications"
+
+    id: Mapped[ApplicationId] = mapped_column(primary_key=True)
+    status: Mapped[ApplicationStatus]
+    cover_letter: Mapped[str] = mapped_column(Text(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    user_id: Mapped[UserId]
+
+    vacancy_id: Mapped[VacancyId] = mapped_column(ForeignKey("vacancies.id"))
+    vacancy: Mapped["VacancyModel"] = relationship(back_populates="applications")

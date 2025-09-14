@@ -21,7 +21,7 @@ class ApplicationViewReader(Protocol):
 
 
 class ApplicationReader(Protocol):
-    async def get_by_id(self, application_id: ApplicationId) -> Application:
+    async def get_by_id(self, application_id: ApplicationId) -> Application | None:
         raise NotImplementedError
 
     async def count_user_applications(self, user_id: UserId) -> int:
@@ -29,7 +29,7 @@ class ApplicationReader(Protocol):
 
     async def get_user_application_by_vacancy_id(
         self, user_id: UserId, vacancy_id: VacancyId
-    ) -> ApplicationDetailViewModel | None:
+    ) -> Application | None:
         raise NotImplementedError
 
 
