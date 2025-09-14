@@ -82,7 +82,9 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         employment_type: EmploymentType | None = None,
         employer_id: EmployerId | None = None,
     ) -> list[VacancyViewModel]:
-        stmt = select(VacancyModel).options(joinedload(VacancyModel.employer))
+        stmt = (
+            select(VacancyModel).options(joinedload(VacancyModel.employer)).distinct()
+        )
         stmt = self._apply_filters_to_stmt(
             stmt, search, salary_from, work_format, employment_type, employer_id
         )
