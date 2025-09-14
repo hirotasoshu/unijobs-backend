@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "unijobs-backend"
+version = "0.1.0"
+description = ""
+authors = ["Maksim Zayakin <rasetsuq@yandex.ru>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.116.1"
+dishka = "^1.7.1"
+sqlalchemy = "^2.0.43"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.13.0"
+mypy = "^1.18.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
