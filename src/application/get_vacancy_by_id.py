@@ -17,7 +17,7 @@ class VacancyGateway(VacancyViewReader, Protocol):
     pass
 
 
-class GetVacanciesById(Interactor[VacancyByIdDTO, VacancyDetailViewModel]):
+class GetVacancyById(Interactor[VacancyByIdDTO, VacancyDetailViewModel]):
     def __init__(self, vacancy_gateway: VacancyGateway):
         self.vacancy_gateway: VacancyGateway = vacancy_gateway
 

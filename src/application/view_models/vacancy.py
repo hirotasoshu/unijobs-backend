@@ -10,8 +10,8 @@ from src.domain.value_object.workformat import WorkFormat
 class VacancyViewModel:
     id: VacancyId
     title: str
-    salary_from: int
-    salary_to: int
+    salary_from: int | None
+    salary_to: int | None
     employer: EmployerViewModel
 
 
@@ -20,5 +20,5 @@ class VacancyDetailViewModel(VacancyViewModel):
     key_skills: list[str]
     work_format: WorkFormat
     employment_type: EmploymentType
-    description: str
+    description: str | None
     location: str

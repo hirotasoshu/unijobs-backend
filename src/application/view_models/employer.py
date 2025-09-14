@@ -7,9 +7,9 @@ from src.domain.value_object.ids import EmployerId
 class EmployerViewModel:
     id: EmployerId
     name: str
-    avatar_url: str
+    avatar_url: str | None
 
 
 @dataclass(kw_only=True)
 class EmployerDetailViewModel(EmployerViewModel):
-    description: str
+    description: str | None
