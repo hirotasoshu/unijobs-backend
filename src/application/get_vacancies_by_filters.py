@@ -8,6 +8,7 @@ from src.application.view_models.vacancy import VacancyViewModel
 from src.domain.value_object.employment_type import EmploymentType
 from src.domain.value_object.ids import EmployerId
 from src.domain.value_object.workformat import WorkFormat
+from src.domain.exception.pagination import IncorrectPagination
 
 
 @dataclass
@@ -38,6 +39,9 @@ class GetVacanciesByFilters(Interactor[VacancyByFiltersDTO, VacancyByFiltersResu
 
     @override
     async def execute(self, data: VacancyByFiltersDTO) -> VacancyByFiltersResultDTO:
+        if data.page < 1 or data.page_size > 500:
+            raise IncorrectPagination(page=data.page, page_size=data.page_size)
+
         total = await self.vacancy_gateway.count_by_filters(
             search=data.search,
             salary_from=data.salary_from,

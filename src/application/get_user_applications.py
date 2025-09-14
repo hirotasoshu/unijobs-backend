@@ -8,6 +8,7 @@ from src.application.common.application_gateway import (
 )
 from src.application.common.interactor import Interactor
 from src.application.view_models.application import ApplicationViewModel
+from src.domain.exception.pagination import IncorrectPagination
 from src.domain.value_object.ids import UserId
 
 
@@ -36,6 +37,8 @@ class GetUserApplications(Interactor[UserApplicationsDTO, UserApplicationResultD
 
     @override
     async def execute(self, data: UserApplicationsDTO) -> UserApplicationResultDTO:
+        if data.page < 1 or data.page_size > 500:
+            raise IncorrectPagination(page=data.page, page_size=data.page_size)
         total = await self.applications_gateway.count_user_applications(data.user_id)
         total_pages = ceil(total / data.page_size)
         result = await self.applications_gateway.get_user_application_views(
