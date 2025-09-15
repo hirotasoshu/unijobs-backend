@@ -139,7 +139,7 @@ class SqlAlchemyApplicationGateway(
     @override
     async def update(self, application: Application) -> None:
         app_db_model = self._to_db_model(application)
-        _ = await self.session.merge(app_db_model, load=False)
+        _ = await self.session.merge(app_db_model)
 
     @override
     async def delete(self, application: Application) -> None:

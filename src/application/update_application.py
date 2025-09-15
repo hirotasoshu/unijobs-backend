@@ -50,6 +50,7 @@ class UpdateApplication(Interactor[UpdateApplicationDTO, ApplicationId]):
             raise StudentCantChangeViewedApplication(application_id=data.application_id)
 
         application.cover_letter = data.new_cover_letter
+
         await self.application_gateway.update(application)
         await self.transaction_manager.commit()
         return application.id

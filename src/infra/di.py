@@ -28,7 +28,7 @@ class DiProvider(Provider):
     async def provide_engine(self) -> AsyncEngine:
         return create_async_engine(
             "sqlite+aiosqlite:////home/hirotasoshu/code/unijobs-backend/test.db",
-            echo=True,
+            echo=False,
         )
 
     @provide(scope=Scope.APP)
