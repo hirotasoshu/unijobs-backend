@@ -5,10 +5,11 @@ from typing import Protocol, override
 from src.application.common.interactor import Interactor
 from src.application.common.vacancy_gateway import VacancyReader, VacancyViewReader
 from src.application.view_models.vacancy import VacancyViewModel
+from src.domain.exception.pagination import IncorrectPagination
 from src.domain.value_object.employment_type import EmploymentType
 from src.domain.value_object.ids import EmployerId
+from src.domain.value_object.language import Language
 from src.domain.value_object.workformat import WorkFormat
-from src.domain.exception.pagination import IncorrectPagination
 
 
 @dataclass
@@ -20,6 +21,7 @@ class VacancyByFiltersDTO:
     work_format: WorkFormat | None = None
     employment_type: EmploymentType | None = None
     employer_id: EmployerId | None = None
+    language: Language = Language.EN
 
 
 @dataclass
@@ -58,6 +60,7 @@ class GetVacanciesByFilters(Interactor[VacancyByFiltersDTO, VacancyByFiltersResu
             work_format=data.work_format,
             employment_type=data.employment_type,
             employer_id=data.employer_id,
+            language=data.language,
         )
         return VacancyByFiltersResultDTO(
             result=result, total=total, total_pages=total_pages

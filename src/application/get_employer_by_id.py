@@ -5,12 +5,14 @@ from src.application.common.employer_gateway import EmployerViewReader
 from src.application.common.interactor import Interactor
 from src.application.view_models.employer import EmployerDetailViewModel
 from src.domain.value_object.ids import EmployerId
+from src.domain.value_object.language import Language
 from src.domain.exception.employer import EmployerNotFoundError
 
 
 @dataclass
 class GetEmployerByIdDTO:
     employer_id: EmployerId
+    language: Language
 
 
 class EmployerGateway(EmployerViewReader, Protocol):
@@ -23,7 +25,9 @@ class GetEmployerById(Interactor[GetEmployerByIdDTO, EmployerDetailViewModel]):
 
     @override
     async def execute(self, data: GetEmployerByIdDTO) -> EmployerDetailViewModel:
-        employer_view = await self.employer_gateway.get_view_by_id(data.employer_id)
+        employer_view = await self.employer_gateway.get_view_by_id(
+            data.employer_id, data.language
+        )
         if not employer_view:
             raise EmployerNotFoundError(data.employer_id)
         return employer_view

@@ -3,6 +3,7 @@ from typing import Protocol
 from src.application.view_models.vacancy import VacancyDetailViewModel, VacancyViewModel
 from src.domain.value_object.employment_type import EmploymentType
 from src.domain.value_object.ids import EmployerId, VacancyId
+from src.domain.value_object.language import Language
 from src.domain.value_object.workformat import WorkFormat
 
 
@@ -16,10 +17,13 @@ class VacancyViewReader(Protocol):
         work_format: WorkFormat | None = None,
         employment_type: EmploymentType | None = None,
         employer_id: EmployerId | None = None,
+        language: Language = Language.EN,
     ) -> list[VacancyViewModel]:
         raise NotImplementedError
 
-    async def get_view_by_id(self, id: VacancyId) -> VacancyDetailViewModel | None:
+    async def get_view_by_id(
+        self, id: VacancyId, language: Language = Language.EN
+    ) -> VacancyDetailViewModel | None:
         raise NotImplementedError
 
 

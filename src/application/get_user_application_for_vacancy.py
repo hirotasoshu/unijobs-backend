@@ -6,12 +6,14 @@ from src.application.common.interactor import Interactor
 from src.application.view_models.application import ApplicationDetailViewModel
 from src.domain.exception.application import UserApplicationForVacancyNotFound
 from src.domain.value_object.ids import UserId, VacancyId
+from src.domain.value_object.language import Language
 
 
 @dataclass
 class GetUserApplicationForVacancyDTO:
     vacancy_id: VacancyId
     user_id: UserId
+    language: Language = Language.EN
 
 
 class ApplicationGateway(ApplicationViewReader, Protocol):
@@ -31,7 +33,7 @@ class GetUserApplicationForVacancy(
         # TODO: PASS HERE IDENTITY PROVIDER INSTEAD OF READY USER ID FROM MIDDLEWARE
         application_view = (
             await self.application_gateway.get_user_application_view_by_vacancy_id(
-                data.user_id, data.vacancy_id
+                data.user_id, data.vacancy_id, language=data.language
             )
         )
         if not application_view:

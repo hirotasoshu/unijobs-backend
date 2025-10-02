@@ -6,16 +6,21 @@ from src.application.view_models.application import (
 )
 from src.domain.entity.application import Application
 from src.domain.value_object.ids import ApplicationId, UserId, VacancyId
+from src.domain.value_object.language import Language
 
 
 class ApplicationViewReader(Protocol):
     async def get_user_application_views(
-        self, user_id: UserId, page: int = 1, page_size: int = 10
+        self,
+        user_id: UserId,
+        page: int = 1,
+        page_size: int = 10,
+        language: Language = Language.EN,
     ) -> list[ApplicationViewModel]:
         raise NotImplementedError
 
     async def get_user_application_view_by_vacancy_id(
-        self, user_id: UserId, vacancy_id: VacancyId
+        self, user_id: UserId, vacancy_id: VacancyId, language: Language = Language.EN
     ) -> ApplicationDetailViewModel | None:
         raise NotImplementedError
 

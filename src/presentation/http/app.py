@@ -183,9 +183,13 @@ def create_app() -> FastAPI:
     @app.get("/employers/{id}")
     @inject
     async def get_employer_by_id(
-        id: EmployerId, interactor: FromDishka[GetEmployerById]
+        id: EmployerId,
+        interactor: FromDishka[GetEmployerById],
+        language: Language = Depends(get_locale),
     ) -> EmployerDetailViewModel:
-        return await interactor.execute(GetEmployerByIdDTO(employer_id=id))
+        return await interactor.execute(
+            GetEmployerByIdDTO(employer_id=id, language=language)
+        )
 
     @app.get("/vacancies")
     @inject
@@ -194,7 +198,7 @@ def create_app() -> FastAPI:
         interactor: FromDishka[GetVacanciesByFilters],
         language: Language = Depends(get_locale),
     ) -> VacancyByFiltersResultDTO:
-        dto = VacancyByFiltersDTO(**query.model_dump())
+        dto = VacancyByFiltersDTO(language=language, **query.model_dump())
         return await interactor.execute(dto)
 
     @app.get("/vacancies/{id}")
@@ -202,9 +206,9 @@ def create_app() -> FastAPI:
     async def get_vacancy_by_id(
         id: VacancyId,
         interactor: FromDishka[GetVacancyById],
-        langugae: Language = Depends(get_locale),
+        language: Language = Depends(get_locale),
     ) -> VacancyDetailViewModel:
-        dto = VacancyByIdDTO(vacancy_id=id)
+        dto = VacancyByIdDTO(vacancy_id=id, language=language)
         return await interactor.execute(dto)
 
     @app.get("/users/me/applications")
@@ -214,6 +218,7 @@ def create_app() -> FastAPI:
         page_size: int,
         request: Request,
         interactor: FromDishka[GetUserApplications],
+        language: Language = Depends(get_locale),
     ) -> UserApplicationResultDTO:
         if "user" not in request.scope:
             raise HTTPException(
@@ -222,7 +227,9 @@ def create_app() -> FastAPI:
             )
         user_id = request.scope["user"]["user_id"]
 
-        dto = UserApplicationsDTO(user_id=user_id, page=page, page_size=page_size)
+        dto = UserApplicationsDTO(
+            user_id=user_id, page=page, page_size=page_size, language=language
+        )
         return await interactor.execute(dto)
 
     @app.get("/users/me/applications/vacancies/{vacancy_id}")
@@ -231,6 +238,7 @@ def create_app() -> FastAPI:
         vacancy_id: VacancyId,
         request: Request,
         interactor: FromDishka[GetUserApplicationForVacancy],
+        language: Language = Depends(get_locale),
     ) -> ApplicationDetailViewModel:
         if "user" not in request.scope:
             raise HTTPException(
@@ -239,7 +247,9 @@ def create_app() -> FastAPI:
             )
         user_id = request.scope["user"]["user_id"]
 
-        dto = GetUserApplicationForVacancyDTO(user_id=user_id, vacancy_id=vacancy_id)
+        dto = GetUserApplicationForVacancyDTO(
+            user_id=user_id, vacancy_id=vacancy_id, language=language
+        )
         return await interactor.execute(dto)
 
     @app.post("/users/me/applications")

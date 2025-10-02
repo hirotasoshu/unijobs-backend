@@ -6,11 +6,13 @@ from src.application.common.vacancy_gateway import VacancyViewReader
 from src.application.view_models.vacancy import VacancyDetailViewModel
 from src.domain.exception.vacancy import VacancyNotFoundError
 from src.domain.value_object.ids import VacancyId
+from src.domain.value_object.language import Language
 
 
 @dataclass
 class VacancyByIdDTO:
     vacancy_id: VacancyId
+    language: Language
 
 
 class VacancyGateway(VacancyViewReader, Protocol):
@@ -23,7 +25,9 @@ class GetVacancyById(Interactor[VacancyByIdDTO, VacancyDetailViewModel]):
 
     @override
     async def execute(self, data: VacancyByIdDTO) -> VacancyDetailViewModel:
-        result = await self.vacancy_gateway.get_view_by_id(data.vacancy_id)
+        result = await self.vacancy_gateway.get_view_by_id(
+            data.vacancy_id, data.language
+        )
         if not result:
             raise VacancyNotFoundError(data.vacancy_id)
         return result
