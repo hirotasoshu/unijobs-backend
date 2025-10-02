@@ -10,6 +10,7 @@ from src.application.view_models.employer import EmployerViewModel
 from src.application.view_models.vacancy import VacancyDetailViewModel, VacancyViewModel
 from src.domain.value_object.employment_type import EmploymentType
 from src.domain.value_object.ids import EmployerId, VacancyId
+from src.domain.value_object.language import Language
 from src.domain.value_object.workformat import WorkFormat
 from src.infra.adapters.database.models import EmployerModel, VacancyModel
 
@@ -38,8 +39,12 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
             term = f"%{search}%"
             stmt = stmt.where(
                 or_(
-                    VacancyModel.title.ilike(term),
-                    EmployerModel.name.ilike(term),
+                    VacancyModel.title_en.ilike(term),
+                    VacancyModel.title_ru.ilike(term),
+                    VacancyModel.title_fr.ilike(term),
+                    EmployerModel.name_en.ilike(term),
+                    EmployerModel.name_ru.ilike(term),
+                    EmployerModel.name_fr.ilike(term),
                     VacancyModel.key_skills.ilike(term),
                 )
             )
@@ -81,6 +86,7 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         work_format: WorkFormat | None = None,
         employment_type: EmploymentType | None = None,
         employer_id: EmployerId | None = None,
+        language: Language = Language.EN,
     ) -> list[VacancyViewModel]:
         stmt = (
             select(VacancyModel).options(joinedload(VacancyModel.employer)).distinct()
@@ -98,12 +104,12 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         for vacancy_db_model in rows:
             emp_vm = EmployerViewModel(
                 id=vacancy_db_model.employer.id,
-                name=vacancy_db_model.employer.name,
+                name=vacancy_db_model.employer.name.get(language),
                 avatar_url=vacancy_db_model.employer.avatar_url,
             )
             vacancy_vm = VacancyViewModel(
                 id=vacancy_db_model.id,
-                title=vacancy_db_model.title,
+                title=vacancy_db_model.title.get(language),
                 salary_from=vacancy_db_model.salary_from,
                 salary_to=vacancy_db_model.salary_to,
                 employer=emp_vm,
@@ -113,7 +119,9 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         return result
 
     @override
-    async def get_view_by_id(self, id: VacancyId) -> VacancyDetailViewModel | None:
+    async def get_view_by_id(
+        self, id: VacancyId, language: Language = Language.EN
+    ) -> VacancyDetailViewModel | None:
         stmt = (
             select(VacancyModel)
             .options(joinedload(VacancyModel.employer))
@@ -126,19 +134,21 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
 
         employer_view_model = EmployerViewModel(
             id=vacancy_db_model.employer.id,
-            name=vacancy_db_model.employer.name,
+            name=vacancy_db_model.employer.name.get(language),
             avatar_url=vacancy_db_model.employer.avatar_url,
         )
 
         return VacancyDetailViewModel(
             id=vacancy_db_model.id,
-            title=vacancy_db_model.title,
+            title=vacancy_db_model.title.get(language),
             salary_from=vacancy_db_model.salary_from,
             salary_to=vacancy_db_model.salary_to,
             employer=employer_view_model,
             key_skills=self._parse_key_skills(vacancy_db_model.key_skills),
             work_format=vacancy_db_model.work_format,
             employment_type=vacancy_db_model.employment_type,
-            description=vacancy_db_model.description,
-            location=vacancy_db_model.location,
+            description=vacancy_db_model.description.get(language)
+            if vacancy_db_model.description
+            else None,
+            location=vacancy_db_model.location.get(language),
         )

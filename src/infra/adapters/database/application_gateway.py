@@ -18,6 +18,7 @@ from src.application.view_models.employer import EmployerViewModel
 from src.application.view_models.vacancy import VacancyViewModel
 from src.domain.entity.application import Application
 from src.domain.value_object.ids import ApplicationId, UserId, VacancyId
+from src.domain.value_object.language import Language
 from src.infra.adapters.database.models import ApplicationModel, VacancyModel
 
 
@@ -29,7 +30,11 @@ class SqlAlchemyApplicationGateway(
 
     @override
     async def get_user_application_views(
-        self, user_id: UserId, page: int = 1, page_size: int = 10
+        self,
+        user_id: UserId,
+        page: int = 1,
+        page_size: int = 10,
+        language: Language = Language.EN,
     ) -> list[ApplicationViewModel]:
         stmt = (
             select(ApplicationModel)
@@ -48,7 +53,7 @@ class SqlAlchemyApplicationGateway(
 
         result: list[ApplicationViewModel] = []
         for app_db_model in applications:
-            vacancy_vm = self._create_vacancy_view_model(app_db_model.vacancy)
+            vacancy_vm = self._create_vacancy_view_model(app_db_model.vacancy, language)
 
             app_vm = ApplicationViewModel(
                 id=app_db_model.id,
@@ -63,7 +68,7 @@ class SqlAlchemyApplicationGateway(
 
     @override
     async def get_user_application_view_by_vacancy_id(
-        self, user_id: UserId, vacancy_id: VacancyId
+        self, user_id: UserId, vacancy_id: VacancyId, language: Language = Language.EN
     ) -> ApplicationDetailViewModel | None:
         stmt = (
             select(ApplicationModel)
@@ -82,7 +87,7 @@ class SqlAlchemyApplicationGateway(
         if app_db_model is None:
             return None
 
-        vacancy_vm = self._create_vacancy_view_model(app_db_model.vacancy)
+        vacancy_vm = self._create_vacancy_view_model(app_db_model.vacancy, language)
 
         return ApplicationDetailViewModel(
             id=app_db_model.id,
@@ -157,17 +162,17 @@ class SqlAlchemyApplicationGateway(
         )
 
     def _create_vacancy_view_model(
-        self, vacancy_db_model: VacancyModel
+        self, vacancy_db_model: VacancyModel, language: Language
     ) -> VacancyViewModel:
         employer_vm = EmployerViewModel(
             id=vacancy_db_model.employer.id,
-            name=vacancy_db_model.employer.name,
+            name=vacancy_db_model.employer.name.get(language),
             avatar_url=vacancy_db_model.employer.avatar_url,
         )
 
         return VacancyViewModel(
             id=vacancy_db_model.id,
-            title=vacancy_db_model.title,
+            title=vacancy_db_model.title.get(language),
             salary_from=vacancy_db_model.salary_from,
             salary_to=vacancy_db_model.salary_to,
             employer=employer_vm,
