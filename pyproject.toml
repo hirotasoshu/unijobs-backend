@@ -1,5 +1,6 @@
 [tool.poetry]
 name = "unijobs-backend"
+package-mode = false
 version = "0.1.0"
 description = ""
 authors = ["Maksim Zayakin <rasetsuq@yandex.ru>"]
