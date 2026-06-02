@@ -11,8 +11,7 @@ def test_seed_engine_uses_env_driven_database_config(monkeypatch):
         return object()
 
     monkeypatch.setenv("DATABASE_BACKEND", "ydb")
-    monkeypatch.setenv("YDB_ENDPOINT", "grpc://localhost:2136")
-    monkeypatch.setenv("YDB_DATABASE", "/local")
+    monkeypatch.setenv("YDB_ENDPOINT", "grpc://localhost:2136/local")
     monkeypatch.setenv("YDB_AUTH_MODE", "anonymous")
     monkeypatch.setenv("YDB_DISABLE_DISCOVERY", "1")
     monkeypatch.setattr(seed_db, "create_async_engine", fake_create_async_engine)

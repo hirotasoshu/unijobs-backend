@@ -89,15 +89,13 @@ jobs:
             "https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets/$YC_BACKEND_LOCKBOX_SECRET_ID/payload")"
 
           ydb_endpoint="$(jq -r '.entries[] | select(.key == "YDB_ENDPOINT") | .textValue' <<<"$payload")"
-          ydb_database="$(jq -r '.entries[] | select(.key == "YDB_DATABASE") | .textValue' <<<"$payload")"
 
-          if [ -z "$ydb_endpoint" ] || [ -z "$ydb_database" ]; then
-            echo "Lockbox payload does not contain YDB_ENDPOINT/YDB_DATABASE."
+          if [ -z "$ydb_endpoint" ]; then
+            echo "Lockbox payload does not contain YDB_ENDPOINT."
             exit 1
           fi
 
           echo "YDB_ENDPOINT=$ydb_endpoint" >> "$GITHUB_ENV"
-          echo "YDB_DATABASE=$ydb_database" >> "$GITHUB_ENV"
         env:
           YC_IAM_TOKEN: ${{ steps.iam-token.outputs.token }}
           YC_BACKEND_LOCKBOX_SECRET_ID: ${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}
@@ -131,7 +129,6 @@ jobs:
         env:
           DATABASE_BACKEND: ydb
           YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
-          YDB_DATABASE: ${{ env.YDB_DATABASE }}
           YDB_AUTH_MODE: access_token
           YDB_ACCESS_TOKEN: ${{ steps.iam-token.outputs.token }}
 
@@ -158,7 +155,6 @@ jobs:
           revision-secrets: |
             AUTH_JWT_SECRET=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/AUTH_JWT_SECRET
             YDB_ENDPOINT=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/YDB_ENDPOINT
-            YDB_DATABASE=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/YDB_DATABASE
 
       - name: Smoke test backend
         run: curl --fail --silent --show-error "$APP_URL/api/healthz" >/dev/null

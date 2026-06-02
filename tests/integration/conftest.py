@@ -21,8 +21,7 @@ from src.presentation.http.app import create_app
 
 def _configure_ydb_environment(endpoint: str) -> None:
     os.environ["DATABASE_BACKEND"] = "ydb"
-    os.environ["YDB_ENDPOINT"] = endpoint
-    os.environ["YDB_DATABASE"] = "/local"
+    os.environ["YDB_ENDPOINT"] = f"{endpoint}/local"
     os.environ["YDB_AUTH_MODE"] = "anonymous"
     os.environ["YDB_DISABLE_DISCOVERY"] = "1"
 

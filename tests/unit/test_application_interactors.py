@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from uuid import uuid4
+from unittest.mock import patch
 
 import pytest
 
@@ -126,6 +127,29 @@ async def test_apply_for_vacancy_adds_application_and_commits():
     assert gateway.applications[0].user_id == user_id
     assert gateway.applications[0].vacancy_id == vacancy_id
     assert transaction_manager.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_apply_for_vacancy_logs_created_application():
+    gateway = FakeApplicationGateway()
+    transaction_manager = FakeTransactionManager()
+    interactor = ApplyForVacancy(transaction_manager, gateway)
+    user_id = _user_id()
+    vacancy_id = _vacancy_id()
+
+    with patch("src.application.apply_for_vacancy.logger.info") as log_info:
+        await interactor.execute(
+            ApplyForVacancyDTO(
+                user_id=user_id, vacancy_id=vacancy_id, cover_letter="I am interested"
+            )
+        )
+
+    log_info.assert_called_once_with(
+        "Application created application_id=%s user_id=%s vacancy_id=%s",
+        gateway.applications[0].id,
+        user_id,
+        vacancy_id,
+    )
 
 
 @pytest.mark.asyncio

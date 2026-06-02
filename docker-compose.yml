@@ -14,8 +14,7 @@ services:
     environment:
       APP_ENV: local
       DATABASE_BACKEND: ydb
-      YDB_ENDPOINT: grpc://ydb:2136
-      YDB_DATABASE: /local
+      YDB_ENDPOINT: grpc://ydb:2136/local
       YDB_AUTH_MODE: anonymous
       YDB_DISABLE_DISCOVERY: "1"
       AUTH_JWT_SECRET: local-dev-secret-change-me

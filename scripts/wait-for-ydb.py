@@ -1,5 +1,6 @@
 import os
 import time
+from urllib.parse import parse_qs, urlparse
 
 import ydb
 from sqlalchemy import create_engine
@@ -9,10 +10,12 @@ from src.infra.database import connect_args, sync_database_url
 
 
 def wait_for_driver() -> None:
-    endpoint = os.environ["YDB_ENDPOINT"]
+    parsed_endpoint = urlparse(os.environ["YDB_ENDPOINT"])
+    database = parse_qs(parsed_endpoint.query).get("database", [None])[0]
+    database = database or parsed_endpoint.path
     config = ydb.DriverConfig(
-        endpoint,
-        database=os.environ["YDB_DATABASE"],
+        f"{parsed_endpoint.scheme}://{parsed_endpoint.netloc}",
+        database=database,
         credentials=ydb.credentials.AnonymousCredentials(),
         disable_discovery=True,
     )

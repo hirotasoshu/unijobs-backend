@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Protocol, override
 
@@ -10,6 +11,9 @@ from src.application.common.transaction import TransactionManager
 from src.domain.entity.application import Application
 from src.domain.exception.application import UserApplicationForVacancyAlreadyExists
 from src.domain.value_object.ids import UserId, VacancyId, ApplicationId
+
+
+logger = logging.getLogger("unijobs.application")
 
 
 @dataclass
@@ -42,6 +46,11 @@ class ApplyForVacancy(Interactor[ApplyForVacancyDTO, ApplicationId]):
             )
         )
         if existing_application:
+            logger.warning(
+                "Application creation rejected: duplicate application user_id=%s vacancy_id=%s",
+                data.user_id,
+                data.vacancy_id,
+            )
             raise UserApplicationForVacancyAlreadyExists(
                 vacancy_id=data.vacancy_id, user_id=data.user_id
             )
@@ -52,4 +61,10 @@ class ApplyForVacancy(Interactor[ApplyForVacancyDTO, ApplicationId]):
         )
         await self.application_gateway.add(application)
         await self.transaction_manager.commit()
+        logger.info(
+            "Application created application_id=%s user_id=%s vacancy_id=%s",
+            application.id,
+            data.user_id,
+            data.vacancy_id,
+        )
         return application.id

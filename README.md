@@ -27,8 +27,7 @@ Seed local YDB after migrations are applied:
 
 ```bash
 DATABASE_BACKEND=ydb \
-YDB_ENDPOINT=grpc://localhost:2136 \
-YDB_DATABASE=/local \
+YDB_ENDPOINT=grpc://localhost:2136/local \
 YDB_AUTH_MODE=anonymous \
 YDB_DISABLE_DISCOVERY=1 \
 poetry run python seed_db.py
@@ -38,8 +37,7 @@ Seed cloud YDB with a short-lived IAM token:
 
 ```bash
 DATABASE_BACKEND=ydb \
-YDB_ENDPOINT=grpcs://<ydb-endpoint>:2135 \
-YDB_DATABASE=<database-path> \
+YDB_ENDPOINT='grpcs://<ydb-endpoint>:2135/?database=<database-path>' \
 YDB_AUTH_MODE=access_token \
 YDB_ACCESS_TOKEN="$(yc iam create-token)" \
 poetry run python seed_db.py
@@ -49,8 +47,7 @@ Seed cloud YDB from a Yandex Cloud runtime with metadata credentials:
 
 ```bash
 DATABASE_BACKEND=ydb \
-YDB_ENDPOINT=grpcs://<ydb-endpoint>:2135 \
-YDB_DATABASE=<database-path> \
+YDB_ENDPOINT='grpcs://<ydb-endpoint>:2135/?database=<database-path>' \
 YDB_AUTH_MODE=metadata \
 poetry run python seed_db.py
 ```

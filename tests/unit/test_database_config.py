@@ -29,10 +29,12 @@ def test_models_do_not_emit_ydb_unsupported_foreign_key_constraints():
     assert "FOREIGN KEY" not in create_applications_sql
 
 
-def test_builds_ydb_urls_from_endpoint_and_database(monkeypatch):
+def test_builds_ydb_urls_from_full_endpoint_dsn(monkeypatch):
     monkeypatch.setenv("DATABASE_BACKEND", "ydb")
-    monkeypatch.setenv("YDB_ENDPOINT", "grpcs://ydb.serverless.yandexcloud.net:2135")
-    monkeypatch.setenv("YDB_DATABASE", "/ru-central1/b1g/folder/database")
+    monkeypatch.setenv(
+        "YDB_ENDPOINT",
+        "grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1g/folder/database",
+    )
 
     assert (
         async_database_url()
@@ -66,9 +68,40 @@ def test_uses_anonymous_credentials_and_disables_discovery_for_local_ydb(monkeyp
 def test_uses_access_token_credentials_for_ydb(monkeypatch):
     monkeypatch.setenv("DATABASE_BACKEND", "ydb")
     monkeypatch.setenv("YDB_AUTH_MODE", "access_token")
+    monkeypatch.setenv("YDB_ENDPOINT", "grpc://localhost:2136/local")
     monkeypatch.setenv("YDB_ACCESS_TOKEN", "test-token")
 
     args = connect_args()
 
     assert args["credentials"].__class__.__name__ == "AuthTokenCredentials"
     assert args["protocol"] == "grpc"
+
+
+def test_uses_secure_grpc_for_serverless_ydb_endpoint_without_scheme(monkeypatch):
+    monkeypatch.setenv("DATABASE_BACKEND", "ydb")
+    monkeypatch.setenv("YDB_AUTH_MODE", "access_token")
+    monkeypatch.setenv(
+        "YDB_ENDPOINT",
+        "grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1g/folder/database",
+    )
+    monkeypatch.setenv("YDB_ACCESS_TOKEN", "test-token")
+
+    args = connect_args()
+
+    assert args["credentials"].__class__.__name__ == "AuthTokenCredentials"
+    assert args["protocol"] == "grpcs"
+
+
+def test_uses_secure_grpc_for_explicit_grpcs_ydb_endpoint(monkeypatch):
+    monkeypatch.setenv("DATABASE_BACKEND", "ydb")
+    monkeypatch.setenv("YDB_AUTH_MODE", "access_token")
+    monkeypatch.setenv(
+        "YDB_ENDPOINT",
+        "grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1g/folder/database",
+    )
+    monkeypatch.setenv("YDB_ACCESS_TOKEN", "test-token")
+
+    args = connect_args()
+
+    assert args["credentials"].__class__.__name__ == "AuthTokenCredentials"
+    assert args["protocol"] == "grpcs"

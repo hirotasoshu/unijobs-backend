@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Protocol, override
 
@@ -13,6 +14,9 @@ from src.domain.exception.application import (
     StudentCantChangeViewedApplication,
 )
 from src.domain.value_object.ids import ApplicationId, UserId
+
+
+logger = logging.getLogger("unijobs.application")
 
 
 @dataclass
@@ -38,13 +42,35 @@ class DeleteApplication(Interactor[DeleteApplicationDTO, None]):
     async def execute(self, data: DeleteApplicationDTO) -> None:
         application = await self.application_gateway.get_by_id(data.application_id)
         if not application:
+            logger.warning(
+                "Application delete rejected: application not found application_id=%s user_id=%s",
+                data.application_id,
+                data.user_id,
+            )
             raise ApplicationNotFound(application_id=data.application_id)
         if application.user_id != data.user_id:
+            logger.warning(
+                "Application delete rejected: forbidden application_id=%s user_id=%s owner_user_id=%s",
+                data.application_id,
+                data.user_id,
+                application.user_id,
+            )
             raise AnotherStudentCantChangeApplication(
                 application_id=data.application_id, user_id=data.user_id
             )
         if not application.is_pending:
+            logger.warning(
+                "Application delete rejected: not pending application_id=%s user_id=%s status=%s",
+                data.application_id,
+                data.user_id,
+                application.status,
+            )
             raise StudentCantChangeViewedApplication(application_id=data.application_id)
 
         await self.application_gateway.delete(application)
         await self.transaction_manager.commit()
+        logger.info(
+            "Application deleted application_id=%s user_id=%s",
+            application.id,
+            data.user_id,
+        )
