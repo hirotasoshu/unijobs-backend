@@ -36,9 +36,9 @@ class UserApplicationForVacancyAlreadyExists(BaseException):
     title_fr: str = "Candidature pour l'offre d'emploi existe deja"
 
     def __init__(self, vacancy_id: VacancyId, user_id: UserId) -> None:
-        super().__init__(self._get_detail_msg_en())
         self.vacancy_id: VacancyId = vacancy_id
         self.user_id: UserId = user_id
+        super().__init__(self._get_detail_msg_en())
 
     @override
     def _get_detail_msg_en(self) -> str:

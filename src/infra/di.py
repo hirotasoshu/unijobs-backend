@@ -1,14 +1,18 @@
 from collections.abc import AsyncIterator
 
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
+from dishka.integrations.fastapi import FastapiProvider
+from fastapi import Request
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from src.application.apply_for_vacancy import ApplyForVacancy
+from src.application.delete_application import DeleteApplication
 from src.application.get_employer_by_id import GetEmployerById
 from src.application.get_user_application_for_vacancy import (
     GetUserApplicationForVacancy,
@@ -21,14 +25,19 @@ from src.infra.adapters.database.application_gateway import SqlAlchemyApplicatio
 from src.infra.adapters.database.employer_gateway import SqlAlchemyEmployerGateway
 from src.infra.adapters.database.transaction import SqlAlchemyTransactionManager
 from src.infra.adapters.database.vacancy_gateway import SqlAlchemyVacancyGateway
+from src.infra.database import async_database_url, connect_args, database_backend
+from src.infra.identity import IdentityProvider, RequestIdentityProvider
 
 
 class DiProvider(Provider):
     @provide(scope=Scope.APP)
     async def provide_engine(self) -> AsyncEngine:
+        engine_kwargs = {"poolclass": NullPool} if database_backend() == "ydb" else {}
         return create_async_engine(
-            "sqlite+aiosqlite:////home/hirotasoshu/code/unijobs-backend/test.db",
+            async_database_url(),
+            connect_args=connect_args(),
             echo=False,
+            **engine_kwargs,
         )
 
     @provide(scope=Scope.APP)
@@ -72,6 +81,10 @@ class DiProvider(Provider):
         self, session: AsyncSession
     ) -> SqlAlchemyTransactionManager:
         return SqlAlchemyTransactionManager(session)
+
+    @provide(scope=Scope.REQUEST)
+    def provide_identity_provider(self, request: Request) -> IdentityProvider:
+        return RequestIdentityProvider(request)
 
     @provide(scope=Scope.REQUEST)
     async def provide_get_employer_by_id_interactor(
@@ -123,6 +136,16 @@ class DiProvider(Provider):
             application_gateway=gateway, transaction_manager=transaction_manager
         )
 
+    @provide(scope=Scope.REQUEST)
+    async def provide_delete_application_interactor(
+        self,
+        gateway: SqlAlchemyApplicationGateway,
+        transaction_manager: SqlAlchemyTransactionManager,
+    ) -> DeleteApplication:
+        return DeleteApplication(
+            application_gateway=gateway, transaction_manager=transaction_manager
+        )
+
 
 def get_di_container() -> AsyncContainer:
-    return make_async_container(DiProvider())
+    return make_async_container(DiProvider(), FastapiProvider())

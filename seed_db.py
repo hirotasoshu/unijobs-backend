@@ -1,18 +1,20 @@
 import asyncio
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from src.domain.value_object.employment_type import EmploymentType
 from src.domain.value_object.ids import EmployerId, VacancyId
 from src.domain.value_object.workformat import WorkFormat
 from src.infra.adapters.database.models import (
-    Base,
     EmployerModel,
     VacancyModel,
     LocalizedString,
 )
+from src.infra.database import async_database_url, connect_args
 
 # Локализованные данные для работодателей
 mock_employers = [
@@ -641,18 +643,23 @@ mock_vacancies = [
 ]
 
 
-async def seed():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:////home/hirotasoshu/code/unijobs-backend/test.db",
+def create_seed_engine():
+    return create_async_engine(
+        async_database_url(),
         echo=True,
+        connect_args=connect_args(),
+        poolclass=NullPool,
     )
+
+
+async def seed():
+    engine = create_seed_engine()
     async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
     async with async_session() as session:
+        await session.execute(delete(VacancyModel))
+        await session.execute(delete(EmployerModel))
+
         # Employers
         for e in mock_employers:
             session.add(

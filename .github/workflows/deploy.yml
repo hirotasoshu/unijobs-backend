@@ -1,0 +1,166 @@
+name: Deploy backend
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+  IMAGE_URL: cr.yandex/${{ vars.YC_REGISTRY_ID }}/unijobs-backend:${{ github.event.release.tag_name }}
+
+jobs:
+  deploy:
+    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout backend release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Verify release is latest
+        run: |
+          latest_tag="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name')"
+          if [ "$latest_tag" != "$RELEASE_TAG" ]; then
+            echo "Release $RELEASE_TAG is not latest release ($latest_tag); refusing to deploy."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Wait for Backend CI on release tag
+        run: |
+          tag_sha="$(git rev-parse HEAD)"
+          deadline=$((SECONDS + 1800))
+
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              --method GET \
+              -f event=push \
+              -f head_sha="$tag_sha" \
+              --jq '.workflow_runs | sort_by(.created_at) | last // empty')"
+
+            if [ -z "$run_json" ]; then
+              echo "Backend CI run for $RELEASE_TAG ($tag_sha) not found yet; waiting..."
+              sleep 15
+              continue
+            fi
+
+            status="$(jq -r '.status' <<<"$run_json")"
+            conclusion="$(jq -r '.conclusion // empty' <<<"$run_json")"
+            url="$(jq -r '.html_url' <<<"$run_json")"
+
+            echo "Backend CI: status=$status conclusion=${conclusion:-none} url=$url"
+
+            if [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+              exit 0
+            fi
+
+            if [ "$status" = "completed" ]; then
+              echo "Backend CI did not pass for $RELEASE_TAG ($tag_sha)."
+              exit 1
+            fi
+
+            sleep 15
+          done
+
+          echo "Timed out waiting for Backend CI on $RELEASE_TAG."
+          exit 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Get Yandex Cloud IAM token
+        id: iam-token
+        uses: docker://ghcr.io/yc-actions/yc-iam-token-fed:1.0.0
+        with:
+          yc-sa-id: ${{ vars.YC_SA_ID }}
+
+      - name: Fetch backend Lockbox payload
+        run: |
+          payload="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $YC_IAM_TOKEN" \
+            "https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets/$YC_BACKEND_LOCKBOX_SECRET_ID/payload")"
+
+          ydb_endpoint="$(jq -r '.entries[] | select(.key == "YDB_ENDPOINT") | .textValue' <<<"$payload")"
+          ydb_database="$(jq -r '.entries[] | select(.key == "YDB_DATABASE") | .textValue' <<<"$payload")"
+
+          if [ -z "$ydb_endpoint" ] || [ -z "$ydb_database" ]; then
+            echo "Lockbox payload does not contain YDB_ENDPOINT/YDB_DATABASE."
+            exit 1
+          fi
+
+          echo "YDB_ENDPOINT=$ydb_endpoint" >> "$GITHUB_ENV"
+          echo "YDB_DATABASE=$ydb_database" >> "$GITHUB_ENV"
+        env:
+          YC_IAM_TOKEN: ${{ steps.iam-token.outputs.token }}
+          YC_BACKEND_LOCKBOX_SECRET_ID: ${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install backend dependencies
+        run: poetry install --with dev --no-interaction --no-ansi
+
+      - name: Login to Yandex Cloud Container Registry
+        uses: yc-actions/yc-cr-login@v3
+        with:
+          yc-iam-token: ${{ steps.iam-token.outputs.token }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_URL }}
+
+      - name: Run YDB migrations
+        run: poetry run alembic upgrade head
+        env:
+          DATABASE_BACKEND: ydb
+          YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
+          YDB_DATABASE: ${{ env.YDB_DATABASE }}
+          YDB_AUTH_MODE: access_token
+          YDB_ACCESS_TOKEN: ${{ steps.iam-token.outputs.token }}
+
+      - name: Deploy backend revision
+        uses: yc-actions/yc-sls-container-deploy@v4
+        with:
+          yc-iam-token: ${{ steps.iam-token.outputs.token }}
+          folder-id: ${{ vars.YC_FOLDER_ID }}
+          container-name: ${{ vars.YC_BACKEND_CONTAINER_NAME }}
+          revision-service-account-id: ${{ vars.YC_BACKEND_SERVICE_ACCOUNT_ID }}
+          revision-cores: '1'
+          revision-memory: 512Mb
+          revision-core-fraction: '50'
+          revision-concurrency: '8'
+          revision-image-url: ${{ env.IMAGE_URL }}
+          revision-execution-timeout: '30'
+          revision-log-options-log-group-id: ${{ vars.YC_LOG_GROUP_ID }}
+          revision-env: |
+            APP_ENV=production
+            DATABASE_BACKEND=ydb
+            YDB_AUTH_MODE=metadata
+            AUTH_JWT_ISSUER=unijobs
+            CORS_ALLOW_ORIGINS=*
+          revision-secrets: |
+            AUTH_JWT_SECRET=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/AUTH_JWT_SECRET
+            YDB_ENDPOINT=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/YDB_ENDPOINT
+            YDB_DATABASE=${{ vars.YC_BACKEND_LOCKBOX_SECRET_ID }}/latest/YDB_DATABASE
+
+      - name: Smoke test backend
+        run: curl --fail --silent --show-error "$APP_URL/api/healthz" >/dev/null
+        env:
+          APP_URL: ${{ vars.APP_URL }}

@@ -34,18 +34,17 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         employment_type: EmploymentType | None = None,
         employer_id: EmployerId | None = None,
     ):
-        # NOTE: мы предполагаем, что join(EmployerModel) уже применён там, где нужно
         if search:
             term = f"%{search}%"
             stmt = stmt.where(
                 or_(
-                    VacancyModel.title_en.ilike(term),
-                    VacancyModel.title_ru.ilike(term),
-                    VacancyModel.title_fr.ilike(term),
-                    EmployerModel.name_en.ilike(term),
-                    EmployerModel.name_ru.ilike(term),
-                    EmployerModel.name_fr.ilike(term),
-                    VacancyModel.key_skills.ilike(term),
+                    VacancyModel.title_en.like(term),
+                    VacancyModel.title_ru.like(term),
+                    VacancyModel.title_fr.like(term),
+                    EmployerModel.name_en.like(term),
+                    EmployerModel.name_ru.like(term),
+                    EmployerModel.name_fr.like(term),
+                    VacancyModel.key_skills.like(term),
                 )
             )
 
@@ -69,7 +68,11 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         employment_type: EmploymentType | None = None,
         employer_id: EmployerId | None = None,
     ) -> int:
-        stmt = select(func.count()).select_from(VacancyModel).join(EmployerModel)
+        stmt = (
+            select(func.count())
+            .select_from(VacancyModel)
+            .join(EmployerModel, VacancyModel.employer_id == EmployerModel.id)
+        )
         stmt = self._apply_filters_to_stmt(
             stmt, search, salary_from, work_format, employment_type, employer_id
         )
@@ -89,7 +92,10 @@ class SqlAlchemyVacancyGateway(VacancyReader, VacancyViewReader):
         language: Language = Language.EN,
     ) -> list[VacancyViewModel]:
         stmt = (
-            select(VacancyModel).options(joinedload(VacancyModel.employer)).distinct()
+            select(VacancyModel)
+            .join(EmployerModel, VacancyModel.employer_id == EmployerModel.id)
+            .options(joinedload(VacancyModel.employer))
+            .distinct()
         )
         stmt = self._apply_filters_to_stmt(
             stmt, search, salary_from, work_format, employment_type, employer_id

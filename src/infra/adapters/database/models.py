@@ -1,11 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, String, Text, Uuid
 from sqlalchemy.orm import (
     Composite,
     DeclarativeBase,
     Mapped,
     composite,
+    foreign,
     mapped_column,
     relationship,
 )
@@ -18,7 +19,12 @@ from src.domain.value_object.workformat import WorkFormat
 
 
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        ApplicationId: Uuid,
+        EmployerId: Uuid,
+        UserId: Uuid,
+        VacancyId: Uuid,
+    }
 
 
 class LocalizedString:
@@ -77,8 +83,19 @@ class EmployerModel(Base):
     )
 
     vacancies: Mapped[list["VacancyModel"]] = relationship(
-        back_populates="employer", cascade="all, delete-orphan"
+        back_populates="employer",
+        cascade="all, delete-orphan",
+        primaryjoin=lambda: EmployerModel.id == foreign(VacancyModel.employer_id),
     )
+
+
+class UserModel(Base):
+    __tablename__: str = "users"
+
+    id: Mapped[UserId] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(30), nullable=False, default="student")
 
 
 class VacancyModel(Base):
@@ -106,10 +123,15 @@ class VacancyModel(Base):
 
     key_skills: Mapped[str | None]
 
-    employer_id: Mapped[EmployerId] = mapped_column(ForeignKey("employers.id"))
-    employer: Mapped["EmployerModel"] = relationship(back_populates="vacancies")
+    employer_id: Mapped[EmployerId]
+    employer: Mapped["EmployerModel"] = relationship(
+        back_populates="vacancies",
+        primaryjoin=lambda: EmployerModel.id == foreign(VacancyModel.employer_id),
+    )
     applications: Mapped[list["ApplicationModel"]] = relationship(
-        back_populates="vacancy", cascade="all, delete-orphan"
+        back_populates="vacancy",
+        cascade="all, delete-orphan",
+        primaryjoin=lambda: VacancyModel.id == foreign(ApplicationModel.vacancy_id),
     )
 
     title: Composite[LocalizedString] = composite(
@@ -140,5 +162,8 @@ class ApplicationModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     user_id: Mapped[UserId]
 
-    vacancy_id: Mapped[VacancyId] = mapped_column(ForeignKey("vacancies.id"))
-    vacancy: Mapped["VacancyModel"] = relationship(back_populates="applications")
+    vacancy_id: Mapped[VacancyId]
+    vacancy: Mapped["VacancyModel"] = relationship(
+        back_populates="applications",
+        primaryjoin=lambda: VacancyModel.id == foreign(ApplicationModel.vacancy_id),
+    )
