@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from src.domain.value_object.application_status import ApplicationStatus
+from src.domain.exception.application import StudentCantChangeViewedApplication
 from src.domain.value_object.ids import ApplicationId, UserId, VacancyId
 
 
@@ -18,3 +19,7 @@ class Application:
     @property
     def is_pending(self):
         return self.status == ApplicationStatus.PENDING
+
+    def ensure_can_be_changed(self) -> None:
+        if not self.is_pending:
+            raise StudentCantChangeViewedApplication(application_id=self.id)

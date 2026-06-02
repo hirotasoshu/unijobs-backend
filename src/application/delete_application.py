@@ -58,14 +58,16 @@ class DeleteApplication(Interactor[DeleteApplicationDTO, None]):
             raise AnotherStudentCantChangeApplication(
                 application_id=data.application_id, user_id=data.user_id
             )
-        if not application.is_pending:
+        try:
+            application.ensure_can_be_changed()
+        except StudentCantChangeViewedApplication:
             logger.warning(
                 "Application delete rejected: not pending application_id=%s user_id=%s status=%s",
                 data.application_id,
                 data.user_id,
                 application.status,
             )
-            raise StudentCantChangeViewedApplication(application_id=data.application_id)
+            raise
 
         await self.application_gateway.delete(application)
         await self.transaction_manager.commit()

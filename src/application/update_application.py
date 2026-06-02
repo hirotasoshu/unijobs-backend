@@ -61,14 +61,16 @@ class UpdateApplication(Interactor[UpdateApplicationDTO, ApplicationId]):
             raise AnotherStudentCantChangeApplication(
                 application_id=data.application_id, user_id=data.user_id
             )
-        if not application.is_pending:
+        try:
+            application.ensure_can_be_changed()
+        except StudentCantChangeViewedApplication:
             logger.warning(
                 "Application update rejected: not pending application_id=%s user_id=%s status=%s",
                 data.application_id,
                 data.user_id,
                 application.status,
             )
-            raise StudentCantChangeViewedApplication(application_id=data.application_id)
+            raise
 
         application.cover_letter = data.new_cover_letter
 
