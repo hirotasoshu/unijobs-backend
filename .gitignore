@@ -145,3 +145,6 @@ pysidedeploy.spec
 
 # bush
 .bash_history
+
+# Git worktrees
+.worktrees/
